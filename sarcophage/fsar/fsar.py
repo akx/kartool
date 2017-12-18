@@ -1,7 +1,5 @@
 from construct import Array, Const, Int16ub, Int32ub, Struct
 
-from .structs import FSAR_HEADER
-
 FSAR_SECTION_INFO = Struct(
     'id' / Int16ub,
     'padding' / Int16ub,
