@@ -126,6 +126,8 @@ def parse_file_section(fp, file_sec_offset, file_infos):
     for file_info in file_infos:
         if file_info['external']:
             continue
+        if file_info['offset'] == 0xFFFFFFFF:
+            continue
         fp.seek(file_sec_offset + 8 + file_info['offset'])
         type_header = fp.read(4)
         print(file_info, type_header)
@@ -146,8 +148,6 @@ def parse_file_infos(fp, file_table_offset):
         fp.seek(file_table_offset + info_offset + 0xC)
         if header == 0x220C:  # Internal file (in this FSAR)
             fte = FILE_TABLE_INTERNAL_ENTRY.parse_stream(fp)
-            if fte.offset == 0xFFFFFFFF:
-                continue
             yield dict(dict(fte), external=False, info_offset=info_offset)
         elif header == 0x220D:  # File pointer (external file)
             chars = []
@@ -197,15 +197,11 @@ def parse_info_section(fp, info_offset):
     table_offsets = {info_kinds.get(io.id, io.id): io.offset for io in info_header.offsets}
     file_infos = list(parse_file_infos(fp, info_offset + 8 + table_offsets['file']))
     warcs = list(parse_warcs(fp, info_offset + 8 + table_offsets['warc']))
-    for warc in warcs:
-
-        file = file_infos[warc['file_id']]
-
-
     return {
         'header': info_header,
         'table_offsets': table_offsets,
         'file_infos': file_infos,
+        'warcs': warcs,
     }
 
 
