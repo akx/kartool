@@ -1,10 +1,7 @@
 import argparse
 import os
-import io
 
-from sarcophage.fsar import get_fsar_file_entries
-from sarcophage.sarc import get_sarc_file_entries
-from sarcophage.yaz0 import decompress_yaz0
+from sarcophage.api import get_file_entries
 
 
 def main():
@@ -18,23 +15,7 @@ def main():
         args.directory = os.path.splitext(args.file)[0]
 
     fp = open(args.file, 'rb')
-    magic = fp.read(4)
-
-    if magic == b"Yaz0":
-        fp.seek(0)
-        data = fp.read()
-        fp.close()
-        fp = io.BytesIO(decompress_yaz0(data))
-
-    fp.seek(0)
-
-    if magic == b"FSAR":
-        file_entries = get_fsar_file_entries(fp)
-    elif magic == b"SARC":
-        file_entries = get_sarc_file_entries(fp.read())
-    else:
-        raise NotImplementedError('Unrecognized magic %s' % magic)
-
+    file_entries = get_file_entries(fp)
     for fent in file_entries:
         dest_name = os.path.join(args.directory, fent.name)
         dest_dir = os.path.dirname(dest_name)
