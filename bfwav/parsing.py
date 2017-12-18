@@ -1,5 +1,6 @@
 import struct
 
+from bfwav.excs import MultiChannelFile
 from .structs import HEADER, HEADER_BLK, SAMPLE_INFO, CHANNEL_INFO, ADPCM_INFO
 from .dsp_adpcm import decode_adpcm
 
@@ -34,18 +35,22 @@ def parse_ref_table(fp):
 def parse_info_section(fp):
     sample_info = dict(SAMPLE_INFO.parse_stream(fp))
     ref_table_start = fp.tell()
-    ref_table_list = list(parse_ref_table(fp))
-    ref_table = dict(ref_table_list)
-    assert len(ref_table_list) == len(ref_table)  # No duplicates that are hidden, right?
-    channel_infos_offset = ref_table[0x7100]
-    fp.seek(ref_table_start + channel_infos_offset)
-    channel_info = dict(CHANNEL_INFO.parse_stream(fp))
-    fp.seek(ref_table_start + channel_info['adpcm_info_offset'])
-    adpcm_info = dict(ADPCM_INFO.parse_stream(fp))
+    ref_table = list(parse_ref_table(fp))
+    channel_infos = []
+    for flag, offset in ref_table:
+        if flag == 0x7100:
+            fp.seek(ref_table_start + offset)
+            channel_info = dict(CHANNEL_INFO.parse_stream(fp))
+            fp.seek(ref_table_start + channel_info['adpcm_info_offset'])
+            adpcm_info = dict(ADPCM_INFO.parse_stream(fp))
+            channel_info['adpcm_info'] = adpcm_info
+            channel_infos.append(channel_info)
+        else:
+            raise NotImplementedError('...')
+
     return {
         'sample_info': sample_info,
-        'channel_info': channel_info,
-        'adpcm_info': adpcm_info,
+        'channel_infos': channel_infos,
     }
 
 
@@ -55,7 +60,8 @@ def decode_data(fp, info):
     sound_data = fp.read(data_length)
     n_samples = info['sample_info']['loop_end'] - info['sample_info']['loop_start']
     assert info['sample_info']['encoding'] == 2  # "DSP ADPCM"
-    adpcm_info = info['adpcm_info']
+    first_channel = info['channel_infos'][0]
+    adpcm_info = first_channel['adpcm_info']
     pcm_data = decode_adpcm(
         sound_data,
         initial_hist1=adpcm_info['yn1'],
@@ -72,6 +78,8 @@ def read_bfwav(fp):
     info_start, info_length = sec_infos[0x7000]
     fp.seek(info_start)
     info = parse_info_section(fp)
+    if len(info['channel_infos']) != 1:
+        raise MultiChannelFile('File has %d channels, but we support only 1' % len(info['channel_infos']))
     data_start, data_length = sec_infos[0x7001]
     fp.seek(data_start)
     pcm_data = decode_data(fp, info)

@@ -1,0 +1,2 @@
+class MultiChannelFile(NotImplementedError):
+    pass
