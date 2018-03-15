@@ -55,21 +55,49 @@ def parse_info_section(fp):
 
 
 def decode_data(fp, info):
+    """
+    Decode a parsed BFWAV into PCM data.
+
+    :param fp: file pointer
+    :param info: info dict
+    :return: list of PCM data streams
+    """
     assert fp.read(4) == b'DATA'
     data_length = readu32(fp)
+    n_channels = len(info['channel_infos'])
+    assert data_length % n_channels == 0
     sound_data = fp.read(data_length)
     n_samples = info['sample_info']['loop_end'] - info['sample_info']['loop_start']
     assert info['sample_info']['encoding'] == 2  # "DSP ADPCM"
-    first_channel = info['channel_infos'][0]
-    adpcm_info = first_channel['adpcm_info']
-    pcm_data = decode_adpcm(
-        sound_data,
-        initial_hist1=adpcm_info['yn1'],
-        initial_hist2=adpcm_info['yn2'],
-        num_samples=n_samples,
-        coefs=list(adpcm_info['coefficients']),
-    )
-    return pcm_data
+    pcm_datas = []
+    for i, channel in enumerate(info['channel_infos']):
+        channel_sound_data = sound_data[i::n_channels]  # De-interleave
+        adpcm_info = channel['adpcm_info']
+        print(i, n_channels, adpcm_info, len(channel_sound_data))
+        pcm_data = decode_adpcm(
+            channel_sound_data,
+            initial_hist1=adpcm_info['yn1'],
+            initial_hist2=adpcm_info['yn2'],
+            num_samples=n_samples,
+            coefs=list(adpcm_info['coefficients']),
+        )
+        pcm_datas.append(pcm_data)
+    return pcm_datas
+
+
+class ParsedBFWAV:
+    def __init__(self, header, info, pcm_datas):
+        self.header = header
+        self.info = info
+        self.pcm_datas = pcm_datas
+
+    @property
+    def n_channels(self):
+        return len(self.info['channel_infos'])
+
+    @property
+    def sample_rate(self):
+        return int(self.info['sample_info']['sample_rate'])
 
 
 def read_bfwav(fp):
@@ -78,13 +106,7 @@ def read_bfwav(fp):
     info_start, info_length = sec_infos[0x7000]
     fp.seek(info_start)
     info = parse_info_section(fp)
-    if len(info['channel_infos']) != 1:
-        raise MultiChannelFile('File has %d channels, but we support only 1' % len(info['channel_infos']))
     data_start, data_length = sec_infos[0x7001]
     fp.seek(data_start)
-    pcm_data = decode_data(fp, info)
-    return {
-        'header': header,
-        'info': info,
-        'data': pcm_data,
-    }
+    pcm_datas = decode_data(fp, info)
+    return ParsedBFWAV(header=header, info=info, pcm_datas=pcm_datas)
