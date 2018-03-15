@@ -15,7 +15,7 @@ WARC_WAVE_ENTRY = Struct(
 )
 
 WARC_HEADER_ENTRY = Struct(
-    'magic' / Const(Int16ub, 0x2207),
+    'magic' / Const(0x2207, Int16ub),
     'unk' / Int16ub,
     'offset' / Int32ub,
 )

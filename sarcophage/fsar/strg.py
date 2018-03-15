@@ -3,9 +3,9 @@ from construct import Int16ub, Int32ub, Struct, Array, Const, Int8ub
 STRG_HEADER = Struct(
     'magic' / Const(b'STRG'),
     'size' / Int32ub,
-    'unk1' / Const(Int32ub, 0x24000000),
+    'unk1' / Const(0x24000000, Int32ub),
     'string_table_offset' / Int32ub,
-    'unk2' / Const(Int32ub, 0x24010000),
+    'unk2' / Const(0x24010000, Int32ub),
     'lookup_table_offset' / Int32ub,
 )
 
@@ -14,7 +14,7 @@ STRING_TABLE_HEADER = Struct(
 )
 
 STRING_TABLE_ENTRY = Struct(
-    'magic' / Const(Int32ub, 0x1F010000),
+    'magic' / Const(0x1F010000, Int32ub),
     'offset' / Int32ub,
     'size' / Int32ub,
 )

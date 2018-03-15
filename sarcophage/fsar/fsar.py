@@ -10,10 +10,10 @@ FSAR_SECTION_INFO = Struct(
 FSAR_HEADER = Struct(
     'magic' / Const(b'FSAR'),
     'endianness' / Const(b'\xFE\xFF'),
-    'header_size' / Const(Int16ub, 0x0040),
+    'header_size' / Const(0x0040, Int16ub),
     'version' / Int32ub,
     'size' / Int32ub,
-    'section_count' / Const(Int16ub, 3),
+    'section_count' / Const(3, Int16ub),
     'unknown' / Int16ub,
     'section_infos' / Array(3, FSAR_SECTION_INFO),
     'padding2' / Const(b'\00' * 8),

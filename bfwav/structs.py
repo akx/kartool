@@ -6,7 +6,7 @@ HEADER = Struct(
     'size' / Int16ub,
     'version' / Int32ub,
     'size' / Int32ub,
-    'n_sections' / Const(Int16ub, 2),
+    'n_sections' / Const(2, Int16ub),
     'padding' / Int16ub,
 )
 
